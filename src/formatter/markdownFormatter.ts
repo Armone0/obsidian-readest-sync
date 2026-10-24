@@ -16,15 +16,16 @@ export class MarkdownFormatter {
     coverRelativePath?: string,
     existingContent?: string
   ): string {
-    const frontmatter = this.generateFrontmatter(book, settings, existingContent);
-    const highlightsBody = this.generateHighlightsSection(book, settings);
+    const { resolvedBook, resolvedCoverPath } = this.resolveBookState(book, coverRelativePath, existingContent);
+    const frontmatter = this.generateFrontmatter(resolvedBook, settings, existingContent);
+    const highlightsBody = this.generateHighlightsSection(resolvedBook, settings);
 
     if (existingContent && settings.preserveUserNotes) {
-      return this.mergeWithExistingContent(frontmatter, highlightsBody, existingContent, book, settings, coverRelativePath);
+      return this.mergeWithExistingContent(frontmatter, highlightsBody, existingContent, resolvedBook, settings, resolvedCoverPath);
     }
 
     // Fresh note generation
-    const overviewSection = this.generateOverviewSection(book, coverRelativePath);
+    const overviewSection = this.generateOverviewSection(resolvedBook, resolvedCoverPath);
     const personalNotesSection = this.generatePersonalNotesSection();
 
     return [
@@ -42,6 +43,83 @@ export class MarkdownFormatter {
   }
 
   /**
+   * Resolves book status, progress, and cover path intelligently against existing note content.
+   * Prevents stale syncs from resetting books that have already been marked finished or read further.
+   */
+  private static resolveBookState(
+    book: NormalizedBook,
+    coverPath?: string,
+    existingContent?: string
+  ): { resolvedBook: NormalizedBook; resolvedCoverPath?: string } {
+    const resolvedBook: NormalizedBook = { ...book };
+    let resolvedCoverPath = coverPath;
+
+    if (!existingContent) {
+      return { resolvedBook, resolvedCoverPath };
+    }
+
+    // 1. If coverPath was not provided or not found, check if existing content already had an embedded cover image
+    if (!resolvedCoverPath) {
+      const wikilinkMatch = existingContent.match(/!\[\[([^|\]]+\.(?:png|jpg|jpeg|webp))(?:\s*\|\s*\d+)?\]\]/i);
+      const mdLinkMatch = existingContent.match(/!\[[^\]]*\]\(([^)]+\.(?:png|jpg|jpeg|webp))\)/i);
+      if (wikilinkMatch) {
+        resolvedCoverPath = wikilinkMatch[1].trim();
+      } else if (mdLinkMatch) {
+        resolvedCoverPath = mdLinkMatch[1].trim();
+      }
+    }
+
+    // 2. Parse existing readingStatus and progress from frontmatter
+    let existingStatus: string | undefined;
+    let existingProgressPercent: number | undefined;
+
+    if (existingContent.startsWith('---')) {
+      const secondDash = existingContent.indexOf('\n---', 3);
+      if (secondDash !== -1) {
+        const rawFm = existingContent.substring(3, secondDash).split('\n');
+        for (const line of rawFm) {
+          const colonIdx = line.indexOf(':');
+          if (colonIdx > 0 && !line.trim().startsWith('-')) {
+            const key = line.substring(0, colonIdx).trim().toLowerCase();
+            const val = line.substring(colonIdx + 1).trim().replace(/^["']|["']$/g, '');
+            if (key === 'readingstatus') {
+              existingStatus = val.toLowerCase();
+            } else if (key === 'progress') {
+              const num = parseInt(val.replace('%', ''), 10);
+              if (!isNaN(num)) existingProgressPercent = num;
+            }
+          }
+        }
+      }
+    }
+
+    // Rule: If note is already marked finished in Obsidian, do not downgrade to unread/reading if local PC sync is stale
+    if (existingStatus === 'finished') {
+      if (resolvedBook.readingStatus !== 'finished') {
+        resolvedBook.readingStatus = 'finished';
+        if (resolvedBook.progressPercent === undefined || resolvedBook.progressPercent < 100) {
+          resolvedBook.progressPercent = 100;
+          if (resolvedBook.progressTotal) {
+            resolvedBook.progressCurrent = resolvedBook.progressTotal;
+          }
+        }
+      }
+    } else if (existingProgressPercent !== undefined) {
+      // If existing note recorded higher progress than stale incoming PC data, preserve higher progress
+      if (resolvedBook.progressPercent === undefined || resolvedBook.progressPercent < existingProgressPercent) {
+        resolvedBook.progressPercent = existingProgressPercent;
+        if (existingProgressPercent >= 99) {
+          resolvedBook.readingStatus = 'finished';
+        } else if (existingProgressPercent > 0 && resolvedBook.readingStatus === 'unread') {
+          resolvedBook.readingStatus = 'reading';
+        }
+      }
+    }
+
+    return { resolvedBook, resolvedCoverPath };
+  }
+
+  /**
    * Generates YAML frontmatter, preserving any custom user fields from existingContent.
    */
   private static generateFrontmatter(
@@ -51,6 +129,19 @@ export class MarkdownFormatter {
   ): string {
     const syncDate = formatTimestamp(Date.now(), 'YYYY-MM-DD HH:mm:ss');
     const statusTag = settings.statusTagMapping[book.readingStatus] || `reading/${book.readingStatus}`;
+
+    // Managed frontmatter keys - MUST NEVER be stored in customFields to avoid duplicate keys / syntax errors
+    const managed = [
+      'title',
+      'author',
+      'format',
+      'readingstatus',
+      'progress',
+      'totalhighlights',
+      'lastsynced',
+      'bookhash',
+      'tags',
+    ];
 
     // Extract custom frontmatter fields from existing note if present
     const customFields: Record<string, string> = {};
@@ -63,9 +154,7 @@ export class MarkdownFormatter {
           if (colonIdx > 0 && !line.trim().startsWith('-')) {
             const key = line.substring(0, colonIdx).trim();
             const val = line.substring(colonIdx + 1).trim();
-            // Don't overwrite managed keys
-            const managed = ['title', 'author', 'format', 'readingStatus', 'progress', 'totalHighlights', 'lastSynced', 'bookHash'];
-            if (!managed.includes(key)) {
+            if (!managed.includes(key.toLowerCase()) && key.length > 0 && val.length > 0) {
               customFields[key] = val;
             }
           }
@@ -124,7 +213,8 @@ export class MarkdownFormatter {
 
     if (coverPath) {
       lines.push('');
-      lines.push(`![Book Cover|180](${coverPath})`);
+      // Use Obsidian native wikilink embed syntax to support spaces and special characters seamlessly
+      lines.push(`![[${coverPath}|180]]`);
     }
 
     lines.push('');
@@ -132,9 +222,14 @@ export class MarkdownFormatter {
     lines.push(`> - **Format**: ${book.format.toUpperCase()}`);
     lines.push(`> - **Status**: \`${book.readingStatus.toUpperCase()}\``);
 
-    if (book.progressCurrent !== undefined && book.progressTotal !== undefined) {
-      const { bar, percent } = generateProgressBar(book.progressCurrent, book.progressTotal);
-      lines.push(`> - **Progress**: ${percent}% \`${bar}\` *(Page ${book.progressCurrent} of ${book.progressTotal})*`);
+    if (book.progressPercent !== undefined) {
+      if (book.progressCurrent !== undefined && book.progressTotal !== undefined) {
+        const { bar, percent } = generateProgressBar(book.progressCurrent, book.progressTotal);
+        lines.push(`> - **Progress**: ${percent}% \`${bar}\` *(Page ${book.progressCurrent} of ${book.progressTotal})*`);
+      } else {
+        const { bar, percent } = generateProgressBar(book.progressPercent, 100);
+        lines.push(`> - **Progress**: ${percent}% \`${bar}\``);
+      }
     }
 
     if (book.groupName) {
@@ -308,7 +403,8 @@ export class MarkdownFormatter {
 
   /**
    * Intelligently merges new frontmatter and highlights into an existing user note,
-   * preserving any text or user annotations placed outside the highlights boundaries.
+   * updating the Overview section (cover, status, progress, highlights count)
+   * while strictly preserving any text, takeaways, or user reflections.
    */
   private static mergeWithExistingContent(
     newFrontmatter: string,
@@ -330,16 +426,39 @@ export class MarkdownFormatter {
     const startIdx = existingBody.indexOf(this.HIGHLIGHTS_START_COMMENT);
     const endIdx = existingBody.indexOf(this.HIGHLIGHTS_END_COMMENT);
 
+    // Regenerate Overview section with latest metadata & cover
+    const newOverview = this.generateOverviewSection(book, coverPath);
+
     if (startIdx !== -1 && endIdx !== -1 && endIdx >= startIdx) {
       // Content before highlights section (contains Overview + Personal Notes)
       const beforeHighlights = existingBody.substring(0, startIdx);
       // Content after highlights section (any user footer)
       const afterHighlights = existingBody.substring(endIdx + this.HIGHLIGHTS_END_COMMENT.length);
 
+      // Extract user personal notes between Overview and Highlights
+      let userNotesSection = '';
+      const notesMarker = '## 📝 My Personal Notes & Reflections';
+      const notesMarkerIdx = beforeHighlights.indexOf(notesMarker);
+
+      if (notesMarkerIdx !== -1) {
+        userNotesSection = beforeHighlights.substring(notesMarkerIdx).trim();
+      } else {
+        // Fallback: check if there's any second-level header (## ) in beforeHighlights
+        const headerMatch = beforeHighlights.match(/\n##\s+/);
+        if (headerMatch && headerMatch.index !== undefined) {
+          userNotesSection = beforeHighlights.substring(headerMatch.index + 1).trim();
+        } else {
+          // If no personal notes section was found, provide the standard personal notes placeholder
+          userNotesSection = this.generatePersonalNotesSection();
+        }
+      }
+
       return [
         newFrontmatter,
         '',
-        beforeHighlights.trim(),
+        newOverview,
+        '',
+        userNotesSection,
         '',
         this.HIGHLIGHTS_START_COMMENT,
         newHighlightsBody,
@@ -353,9 +472,9 @@ export class MarkdownFormatter {
     return [
       newFrontmatter,
       '',
-      existingBody.trim(),
+      newOverview,
       '',
-      '---',
+      this.generatePersonalNotesSection(),
       '',
       this.HIGHLIGHTS_START_COMMENT,
       newHighlightsBody,

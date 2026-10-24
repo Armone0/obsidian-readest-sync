@@ -199,10 +199,27 @@ async function runTests() {
     timestamp: 1700000100000,
   });
 
+  // Test Cover Wikilink formatting
+  const noteWithCover = MarkdownFormatter.format(sampleBook, DEFAULT_SETTINGS, 'Readest/Covers/Clean Code - Robert C. Martin_12345.png');
+  assert(noteWithCover.includes('![[Readest/Covers/Clean Code - Robert C. Martin_12345.png|180]]'), 'Cover uses native Obsidian wikilink embed syntax with spaces');
+
   const mergedNote = MarkdownFormatter.format(sampleBook, DEFAULT_SETTINGS, undefined, existingNoteWithUserWriting);
   assert(mergedNote.includes('This is my personal review of Clean Code! I loved chapter 3 on functions.'), 'USER PERSONAL NOTES PRESERVED AFTER MERGE!');
   assert(mergedNote.includes('Functions should do one thing.'), 'New highlight appended after merge');
   assert(mergedNote.includes('totalHighlights: 2'), 'Frontmatter totalHighlights updated to 2');
+  assert(mergedNote.includes('> - **Highlights & Notes**: 2'), 'Overview section updated in body upon merge');
+  assert((mergedNote.match(/\ntags:/g) || []).length === 1, 'Frontmatter has exactly one tags block (no duplicate tags or red syntax error)');
+
+  // Test Stale PC sync prevention (Mobile finished book, PC has stale unread state)
+  const staleBook: NormalizedBook = {
+    ...sampleBook,
+    readingStatus: 'unread',
+    progressPercent: 0,
+    progressCurrent: 0,
+  };
+  const mergedStaleNote = MarkdownFormatter.format(staleBook, DEFAULT_SETTINGS, undefined, mergedNote);
+  assert(mergedStaleNote.includes('readingStatus: finished'), 'Finished status preserved against stale PC sync');
+  assert(mergedStaleNote.includes('> - **Status**: `FINISHED`'), 'Overview body preserved finished status against stale PC sync');
 
   // 5. Test File Utils
   console.log('\n--- Test 5: File & String Utils ---');

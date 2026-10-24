@@ -95,7 +95,7 @@ export class SyncEngine {
       try {
         // Handle cover image
         let coverRelativePath: string | undefined = undefined;
-        if (this.settings.includeCoverImage && book.coverBuffer && book.coverBuffer.length > 0) {
+        if (this.settings.includeCoverImage) {
           coverRelativePath = await this.saveBookCover(book);
         }
 
@@ -154,11 +154,18 @@ export class SyncEngine {
    * Saves book cover image into the configured covers folder.
    */
   private async saveBookCover(book: NormalizedBook): Promise<string | undefined> {
-    if (!book.coverBuffer) return undefined;
-
     const ext = book.coverExt || 'png';
     const coverFilename = `${sanitizeFilename(book.title)}_${book.hash.substring(0, 8)}.${ext}`;
     const coverPath = normalizePath(`${this.settings.coversFolder}/${coverFilename}`);
+
+    if (!book.coverBuffer || book.coverBuffer.length === 0) {
+      // Check if cover file already exists in vault
+      const existing = this.app.vault.getAbstractFileByPath(coverPath);
+      if (existing instanceof TFile) {
+        return coverPath;
+      }
+      return undefined;
+    }
 
     try {
       const existing = this.app.vault.getAbstractFileByPath(coverPath);
