@@ -211,7 +211,9 @@ export class PackParser {
           cfi: note.cfi,
           page: note.page,
           timestamp: note.updatedAt || note.createdAt || 0,
-          url: note.cfi ? `readest://book/${hash}/cfi/${encodeURIComponent(note.cfi)}` : undefined,
+          url: note.cfi
+            ? `readest://book/${hash}/annotation/${encodeURIComponent(note.id || 'h')}?cfi=${encodeURIComponent(note.cfi)}`
+            : `readest://book/${hash}`,
         });
       }
 

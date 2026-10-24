@@ -268,6 +268,9 @@ export class SqliteParser {
         cfi: (rn['cfi'] as string) || '',
         page: rn['page'] as number | undefined,
         timestamp: (rn['updated_at'] as number) || Date.now(),
+        url: rn['cfi']
+          ? `readest://book/${bookHash}/annotation/${encodeURIComponent((rn['id'] as string) || 'h')}?cfi=${encodeURIComponent(rn['cfi'] as string)}`
+          : `readest://book/${bookHash}`,
       });
     }
 

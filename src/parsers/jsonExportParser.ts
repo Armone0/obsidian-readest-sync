@@ -84,7 +84,11 @@ export class JsonExportParser {
         cfi: ann.cfi || '',
         page: ann.page,
         timestamp: ann.updatedAt || ann.createdAt || exportData.exportedAt || Date.now(),
-        url: ann.cfi && bookMeta.hash ? `readest://book/${bookMeta.hash}/cfi/${encodeURIComponent(ann.cfi)}` : undefined,
+        url: bookMeta.hash
+          ? ann.cfi
+            ? `readest://book/${bookMeta.hash}/annotation/${encodeURIComponent(ann.id || 'h')}?cfi=${encodeURIComponent(ann.cfi)}`
+            : `readest://book/${bookMeta.hash}`
+          : undefined,
       });
     }
 
