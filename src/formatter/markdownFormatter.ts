@@ -361,6 +361,6 @@ export class MarkdownFormatter {
 
   private static escapeYaml(str: string): string {
     if (!str) return '';
-    return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r?\n/g, ' ');
   }
 }
