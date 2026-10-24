@@ -99,7 +99,7 @@ A masterpiece on ecology, power, and religious politics. The world-building of A
 3. Search for **Readest Sync** and click **Install**, then **Enable**.
 
 #### Option B: Manual Installation
-1. Download `main.js`, `manifest.json`, and `styles.css` from the latest [Release](https://github.com/readest/readest).
+1. Download `main.js`, `manifest.json`, and `styles.css` from the latest [Release](https://github.com/Armone0/obsidian-readest-sync/releases/latest).
 2. Inside your Obsidian vault, navigate to `.obsidian/plugins/`.
 3. Create a new folder named `obsidian-readest-sync`.
 4. Copy `main.js`, `manifest.json`, and `styles.css` into that folder.
@@ -142,11 +142,11 @@ A masterpiece on ecology, power, and religious politics. The world-building of A
 If you use Readest on mobile or another device, you can easily transfer your data:
 
 1. In Readest, export your library or annotations:
-   - Export collection as `.rbooks` or `.readestpack`.
+   - Export collection as `.rbooks` (or `.readestpack`).
    - Or export highlights as **JSON (Readest)**.
 2. In Obsidian, run the command:
    ```text
-   Readest Sync: Import .readestpack / .rbooks bundle or JSON
+   Readest Sync: Import .rbooks / .readestpack bundle or JSON
    ```
 3. Drag and drop your file or paste the JSON text directly.
 4. Your books and highlights will be imported instantly!
@@ -167,7 +167,7 @@ Readest Sync is engineered with safety as a primary principle:
 To build the plugin locally:
 
 ```bash
-git clone https://github.com/readest/obsidian-readest-sync.git
+git clone https://github.com/Armone0/obsidian-readest-sync.git
 cd obsidian-readest-sync
 npm install
 npm run build
@@ -179,4 +179,4 @@ The output `main.js` will be compiled into the root directory.
 
 ## 📄 License
 
-MIT License © 2026 Antigravity. Built for the [Readest](https://github.com/readest/readest) community.
+MIT License © 2026 Armone0. Built for the [Readest](https://github.com/readest/readest) and [Obsidian](https://obsidian.md) community.

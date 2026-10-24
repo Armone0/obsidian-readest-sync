@@ -1,6 +1,7 @@
 import { App, Modal, Notice, Setting } from 'obsidian';
 import { SyncEngine } from '../engine/syncEngine';
 import { ReadestSyncSettings } from '../types/settings';
+import { SyncStatsModal } from './syncStatsModal';
 
 export class ReadestImportModal extends Modal {
   private settings: ReadestSyncSettings;
@@ -22,14 +23,14 @@ export class ReadestImportModal extends Modal {
 
     contentEl.createEl('h2', { text: 'Import from Readest' });
     contentEl.createEl('p', {
-      text: 'Import books, annotations, and reading progress directly from a .readestpack, .rbooks, .zip archive, SQLite database, or exported JSON.',
+      text: 'Import books, annotations, and reading progress directly from a .rbooks / .rbook collection, .readestpack bundle, .zip archive, SQLite database, or exported JSON.',
       cls: 'readest-modal-desc',
     });
 
     // Tab buttons
     const tabsContainer = contentEl.createDiv({ cls: 'readest-tabs' });
     const fileTabBtn = tabsContainer.createEl('button', {
-      text: '📁 File (.readestpack / .json / .db)',
+      text: '📁 File (.rbooks / .readestpack / .json / .db)',
       cls: `readest-tab-btn ${this.activeTab === 'file' ? 'active' : ''}`,
     });
     const textTabBtn = tabsContainer.createEl('button', {
@@ -68,13 +69,13 @@ export class ReadestImportModal extends Modal {
     const dropZone = container.createDiv({ cls: 'readest-drop-zone' });
     const dropText = dropZone.createEl('div', { cls: 'readest-drop-text' });
     dropText.createEl('span', { text: '📥 Drag & drop Readest file here, or click to browse', cls: 'readest-drop-title' });
-    dropText.createEl('span', { text: 'Supports .readestpack, .rbooks, .zip, .json, .sqlite, .db', cls: 'readest-drop-sub' });
+    dropText.createEl('span', { text: 'Supports .rbooks, .rbook, .readestpack, .zip, .json, .sqlite, .db', cls: 'readest-drop-sub' });
 
     const fileInput = dropZone.createEl('input', {
       type: 'file',
       cls: 'readest-hidden-input',
     });
-    fileInput.accept = '.readestpack,.rbooks,.zip,.json,.sqlite,.db';
+    fileInput.accept = '.rbooks,.rbook,.readestpack,.zip,.json,.sqlite,.db';
 
     const selectedFileDisplay = container.createDiv({ cls: 'readest-selected-file' });
     selectedFileDisplay.style.display = 'none';
@@ -168,8 +169,8 @@ export class ReadestImportModal extends Modal {
 
       try {
         const result = await this.syncEngine.syncFromJsonString(this.jsonText);
-        new Notice(`Readest Sync: Successfully imported ${result.booksCreated + result.booksUpdated} books and ${result.highlightsSynced} highlights!`);
         this.close();
+        new SyncStatsModal(this.app, result, this.settings.booksFolder).open();
       } catch (err) {
         new Notice(`Import error: ${(err as Error).message}`);
         importBtn.disabled = false;
@@ -188,14 +189,14 @@ export class ReadestImportModal extends Modal {
       result = await this.syncEngine.syncFromJsonString(text);
     } else if (name.endsWith('.sqlite') || name.endsWith('.db')) {
       result = await this.syncEngine.syncFromSqliteBuffer(arrayBuffer);
+    } else if (name.endsWith('.rbooks') || name.endsWith('.rbook') || name.endsWith('.readestpack') || name.endsWith('.zip')) {
+      result = await this.syncEngine.syncFromPackBuffer(arrayBuffer, file.name);
     } else {
-      // .readestpack, .rbooks, .zip
+      // Fallback: attempt pack buffer parsing
       result = await this.syncEngine.syncFromPackBuffer(arrayBuffer, file.name);
     }
 
-    new Notice(
-      `Readest Sync: Processed ${result.booksProcessed} books. Created ${result.booksCreated}, updated ${result.booksUpdated}, synced ${result.highlightsSynced} highlights in ${result.durationMs}ms.`
-    );
+    new SyncStatsModal(this.app, result, this.settings.booksFolder).open();
   }
 
   onClose() {

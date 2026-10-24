@@ -286,7 +286,7 @@ export class ReadestSyncSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Import Pack / Export File')
-      .setDesc('Manually import a .readestpack, .rbooks, .zip, SQLite database, or exported JSON.')
+      .setDesc('Manually import a .rbooks collection, .rbook / .readestpack bundle, .zip archive, SQLite database, or exported JSON.')
       .addButton((btn) => {
         btn.setButtonText('📦 Import Bundle / JSON')
           .onClick(() => {

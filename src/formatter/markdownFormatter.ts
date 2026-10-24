@@ -92,7 +92,10 @@ export class MarkdownFormatter {
     tagsSet.add('readest');
     tagsSet.add(statusTag);
     for (const t of book.tags) {
-      if (t) tagsSet.add(t.replace(/\s+/g, '-'));
+      if (t) {
+        const sanitizedTag = t.trim().replace(/\s+/g, '-').replace(/[^\p{L}\p{N}_\-/]/gu, '');
+        if (sanitizedTag) tagsSet.add(sanitizedTag);
+      }
     }
 
     lines.push('tags:');
@@ -114,8 +117,10 @@ export class MarkdownFormatter {
    */
   private static generateOverviewSection(book: NormalizedBook, coverPath?: string): string {
     const lines: string[] = [];
-    lines.push(`# ${book.title}`);
-    lines.push(`**Author**: [[${book.author}]]`);
+    const cleanTitle = (book.title || 'Untitled Book').replace(/\r?\n/g, ' ');
+    const cleanAuthor = (book.author || 'Unknown Author').replace(/\r?\n/g, ' ');
+    lines.push(`# ${cleanTitle}`);
+    lines.push(`**Author**: [[${cleanAuthor}]]`);
 
     if (coverPath) {
       lines.push('');

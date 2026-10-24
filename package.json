@@ -1,11 +1,12 @@
 {
   "name": "obsidian-readest-sync",
   "version": "1.0.0",
-  "description": "Sync books, highlights, and annotations from Readest e-book reader into your Obsidian vault.",
+  "description": "Sync books, highlights, and annotations from Readest e-book reader into your vault.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
-    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "test": "node -e \"require('esbuild').buildSync({entryPoints: ['test-suite.ts'], outfile: 'test-suite.js', bundle: true, platform: 'node', format: 'cjs'}); require('./test-suite.js'); require('fs').unlinkSync('test-suite.js');\""
   },
   "keywords": [
     "obsidian",
@@ -17,7 +18,7 @@
     "annotations",
     "reading"
   ],
-  "author": "Antigravity",
+  "author": "Armone0",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.14.0",

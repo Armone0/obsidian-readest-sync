@@ -42,7 +42,7 @@ export default class ReadestSyncPlugin extends Plugin {
 
     this.addCommand({
       id: 'readest-import-pack',
-      name: 'Import .readestpack / .rbooks bundle or JSON',
+      name: 'Import .rbooks / .readestpack bundle or JSON',
       callback: () => {
         new ReadestImportModal(this.app, this.settings).open();
       },

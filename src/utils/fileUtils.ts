@@ -27,14 +27,15 @@ export function sanitizeFilename(name: string): string {
  * e.g., 47% [█████████░░░░░░░░░░]
  */
 export function generateProgressBar(current?: number, total?: number, length = 16): { bar: string; percent: number } {
+  const safeLength = Math.max(1, Math.min(100, length));
   if (current === undefined || total === undefined || total <= 0) {
-    return { bar: '░'.repeat(length), percent: 0 };
+    return { bar: '░'.repeat(safeLength), percent: 0 };
   }
 
   const ratio = Math.max(0, Math.min(1, current / total));
   const percent = Math.round(ratio * 100);
-  const filled = Math.round(ratio * length);
-  const empty = length - filled;
+  const filled = Math.max(0, Math.min(safeLength, Math.round(ratio * safeLength)));
+  const empty = Math.max(0, safeLength - filled);
 
   const bar = '█'.repeat(filled) + '░'.repeat(empty);
   return { bar, percent };

@@ -5,7 +5,7 @@ import { isNodeAvailable } from '../utils/pathUtils';
 
 export class PackParser {
   /**
-   * Parse a .readestpack, .rbooks, or Readest .zip backup from a binary Uint8Array or ArrayBuffer.
+   * Parse a .rbooks, .rbook, .readestpack, or Readest .zip backup from a binary Uint8Array or ArrayBuffer.
    */
   public static async parseBuffer(buffer: ArrayBuffer | Uint8Array, fileName?: string): Promise<NormalizedBook[]> {
     const uint8 = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
@@ -21,7 +21,7 @@ export class PackParser {
   }
 
   /**
-   * Parse a .readestpack file from disk (desktop only).
+   * Parse a .rbooks, .rbook, or .readestpack file from disk (desktop only).
    */
   public static async parseFilePath(filePath: string): Promise<NormalizedBook[]> {
     if (!isNodeAvailable()) {
@@ -88,8 +88,9 @@ export class PackParser {
     // If no library.json found, but we have a manifest with books
     if (libraryBooks.length === 0 && packManifest?.books && Array.isArray(packManifest.books)) {
       for (const mBook of packManifest.books) {
-        // Derive a hash or filename key
-        const bookHash = mBook.filename.replace(/\.[^/.]+$/, '');
+        // Derive a clean hash or filename key (e.g. "books/title.epub" -> "title")
+        const cleanName = mBook.filename.replace(/^books\//i, '').replace(/\.[^/.]+$/, '');
+        const bookHash = cleanName.replace(/[\/\\]/g, '-');
         libraryBooks.push({
           hash: bookHash,
           title: mBook.title,
