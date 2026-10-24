@@ -1,0 +1,33 @@
+{
+  "name": "obsidian-readest-sync",
+  "version": "1.0.0",
+  "description": "Sync books, highlights, and annotations from Readest e-book reader into your Obsidian vault.",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
+  },
+  "keywords": [
+    "obsidian",
+    "obsidian-plugin",
+    "readest",
+    "highlights",
+    "ebook",
+    "sync",
+    "annotations",
+    "reading"
+  ],
+  "author": "Antigravity",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "builtin-modules": "^3.3.0",
+    "esbuild": "^0.21.5",
+    "obsidian": "latest",
+    "tslib": "^2.6.3",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "fflate": "^0.8.2"
+  }
+}

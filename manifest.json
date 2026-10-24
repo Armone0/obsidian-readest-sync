@@ -1,0 +1,11 @@
+{
+  "id": "obsidian-readest-sync",
+  "name": "Readest Sync",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "description": "Sync books, highlights, and annotations from Readest e-book reader into your Obsidian vault.",
+  "author": "Antigravity",
+  "authorUrl": "https://github.com/readest/readest",
+  "fundingUrl": "https://github.com/readest/readest",
+  "isDesktopOnly": false
+}
